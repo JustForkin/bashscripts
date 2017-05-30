@@ -15,7 +15,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 COMMENT
 
-version="findtools v0.3.1"
+version="findtools v0.3.2"
 oIFS=$IFS
 blue='\e[0;34m'; green='\e[0;32m'; red='\e[0;31m'; yellow='\e[0;33m'; bold='\e[1m';none='\e[0m'
 function menu {
@@ -180,10 +180,15 @@ function infile {
   }
 
 function byname {
-  echo -e "Use wildcard ${green}?$none for matching any one character, ${green}*$none for matching all characters, and ${green}[]$none for matching ranges of characters enclosed in the brackets.  Find string is case insensitive."
-  echo -ne $green
-  read -p "Enter find string: " fstring
-  echo -ne $none
+  if [[ $1 ]]; then
+    fstring=$1
+  else
+    echo -e "Use wildcard ${green}?$none for matching any one character, ${green}*$none for matching all characters, and ${green}[]$none for matching ranges of characters enclosed in the brackets.  Find string is case insensitive."
+    echo -ne $green
+    read -p "Enter find string: " fstring
+    echo -ne $none
+  fi
+
   if [[ $fstring ]]; then
     IFS=$'\n'
     files=(`find . -iname "*${fstring}*"`)
@@ -265,4 +270,9 @@ case $1 in
   -h|--h*) usage ;;
   --*) cmd=${1#--}; shift ;;
 esac
-findmenu $cmd
+
+if [[ $# == 1 ]]; then
+  byname $1
+else
+  findmenu $cmd
+fi
