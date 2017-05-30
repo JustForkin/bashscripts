@@ -15,7 +15,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 COMMENT
 
-version="findtools v0.3.2"
+version="findtools v0.3.4"
 oIFS=$IFS
 blue='\e[0;34m'; green='\e[0;32m'; red='\e[0;31m'; yellow='\e[0;33m'; bold='\e[1m';none='\e[0m'
 function menu {
@@ -36,7 +36,7 @@ function menu {
     echo -e "$red$i is an invalid entry...please try again!"
     menu "${choices[@]}"
   fi
-  }
+}
 
 function findmenu {
   if [[ -z $1 ]]; then
@@ -50,9 +50,10 @@ function findmenu {
       *content) cmd=infile ;;
     esac
   fi
-  $cmd
+  shift
+  $cmd $@
   findmenu
-  }
+}
 
 function actionmenu {
   unset strmenu
@@ -70,7 +71,7 @@ function actionmenu {
     Delete?line*) deleteline ;;
     Custom*) customcmd ;;
   esac
-  }
+}
 
 function customcmd {
   echo -e "Use ${green}%f$none for found file"
@@ -86,7 +87,7 @@ function customcmd {
     echo -e "${red}Custom command cannot be emptied"
     customcmd
   fi
-  }
+}
 
 function copystructure {
   echo -ne $green
@@ -96,9 +97,9 @@ function copystructure {
     dir_structure=`dirname ${i#*/}`
     dest2="$dest/$dir_structure"
     mkdir -p $dest2
-    cp -vna "$i" "$dest2"
+    cp -va "$i" "$dest2"
   done
-  }
+}
 
 function copy {
   echo -ne $green
@@ -112,7 +113,7 @@ function copy {
     echo -e "${red}Cannot create destination folder $none"
     copy
   fi
-  }
+}
 
 function move {
   echo -ne $green
@@ -126,11 +127,11 @@ function move {
     echo -e "${red}Cannot create destination folder $none"
     copy
   fi
-  }
+}
 
 function deletefile {
   rm -vrf "${files[@]}"
-  }
+}
 
 function change {
   echo -e "Leave blank to remove matching pattern."
@@ -145,20 +146,26 @@ function change {
       mv -vn "$i" "$newname"
     fi
   done
-  }
+}
 
 function deleteline {
   for i in "${files[@]}"; do
     sed -i "/$fstring/d" "$i"
   done
-  }
+}
 
 function infile {
   unset files
-  echo "Find string is case insensitive and can contain basic regex."
-  echo -ne $green
-  read -p "Enter find string: " fstring
-  echo -e $none
+
+  if [[ $1 ]]; then
+    fstring="$@"
+  else
+    echo "Find string is case insensitive and can contain basic regex."
+    echo -ne $green
+    read -p "Enter find string: " fstring
+    echo -e $none
+  fi
+
   if [[ -z $fstring ]]; then
     echo -e "${red}String cannot be emptied. $none"
     infile
@@ -177,11 +184,11 @@ function infile {
   echo
   echo -e "${bold}Found ${#files[@]} files $none"
   [[ $files ]] && actionmenu || infile
-  }
+}
 
 function byname {
   if [[ $1 ]]; then
-    fstring=$1
+    fstring="$@"
   else
     echo -e "Use wildcard ${green}?$none for matching any one character, ${green}*$none for matching all characters, and ${green}[]$none for matching ranges of characters enclosed in the brackets.  Find string is case insensitive."
     echo -ne $green
@@ -203,12 +210,17 @@ function byname {
     echo "${red}Find string cannot be emptied"
     byname
   fi
-  }
+}
 
 function bysize {
-  echo -e "Use ${green}+$none for greater than and ${green}-$none for less than.  Also, use ${green}k M G$none to indicate size in Kilobytes Megabytes Gigabytes, respectively.  For example, find file greater than 50 MB, enter: ${green}+50M"
-  read -p "Enter size: " size
-  echo -ne $none
+  if [[ $1 ]]; then
+    size="$@"
+  else
+    echo -e "Use ${green}+$none for greater than and ${green}-$none for less than.  Also, use ${green}k M G$none to indicate size in Kilobytes Megabytes Gigabytes, respectively.  For example, find file greater than 50 MB, enter: ${green}+50M"
+    read -p "Enter size: " size
+    echo -ne $none
+  fi
+
   if test ${size%[kMG]} -ge 0 2>/dev/null || test ${size%[kMG]} -le 0 2>/dev/null; then
     IFS=$'\n'
     files=(`find . -size "$size"`)
@@ -221,12 +233,17 @@ function bysize {
     echo -e "$red$size is invalid$none"
     bysize
   fi
-  }
+}
 
 function bytime {
-  echo -e "Find files modified n day ago.  For example, find file modified a day ago, enter: ${green}1"
-  read -p "Enter day: " day
-  echo -ne $none
+  if [[ $1 ]]; then
+    day="$@"
+  else
+    echo -e "Find files modified n day ago.  For example, find file modified a day ago, enter: ${green}1"
+    read -p "Enter day: " day
+    echo -ne $none
+  fi
+
   if test $day -gt 0 2>/dev/null; then
     IFS=$'\n'
     files=(`find . -mindepth 1 -mtime "-$day"`)
@@ -242,7 +259,7 @@ function bytime {
     echo -e "$red$day must be a positive number $none"
     bytime
   fi
-  }
+}
 
 function empty {
   IFS=$'\n'
@@ -252,27 +269,27 @@ function empty {
   echo
   echo -e "${bold}Found ${#files[@]} files $none"
   [[ $files ]] && actionmenu || findmenu
-  }
+}
 
 function usage {
   echo "$version"
-  echo -e "${bold}Usage: ${0##*/} [option] $none"
+  echo -e "${bold}Usage: ${0##*/} [option] [pattern]$none"
   echo "Options: menu is shown if option is not specified"
-  echo "  --byname  find file by string pattern"
+  echo "  --byname  find file by string pattern (default if option is not specified)"
   echo "  --bysize  find file by size"
   echo "  --bytime  find file by last modified time"
   echo "  --empty   find empty file/folder"
   echo "  --infile  find file content matching string pattern"
   exit
-  }
+}
 
-case $1 in
-  -h|--h*) usage ;;
-  --*) cmd=${1#--}; shift ;;
-esac
-
-if [[ $# == 1 ]]; then
-  byname $1
+if [[ $# > 0 ]]; then
+  case $1 in
+    -h|--h*) usage ;;
+    --*) cmd=${1#--}; shift ;;
+    *) cmd=byname
+  esac
+  findmenu $cmd $@
 else
-  findmenu $cmd
+  findmenu
 fi
